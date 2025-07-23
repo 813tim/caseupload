@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Case Upload</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 2rem; }
+    input, button { display: block; margin-top: 1rem; width: 100%; padding: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Datei-Upload per Case ID</h1>
+
+  <label for="caseId">Case ID:</label>
+  <input type="text" id="caseId" placeholder="z.B. 12345" />
+
+  <label for="file">Datei auswählen:</label>
+  <input type="file" id="file" />
+
+  <button onclick="uploadFile()">Hochladen</button>
+
+  <p id="status"></p>
+
+  <script>
+    async function uploadFile() {
+      const caseId = document.getElementById('caseId').value.trim();
+      const fileInput = document.getElementById('file');
+      const status = document.getElementById('status');
+
+      if (!caseId || fileInput.files.length === 0) {
+        status.textContent = 'Bitte Case ID und Datei angeben';
+        return;
+      }
+
+      const file = fileInput.files[0];
+      status.textContent = 'SAS-Token wird angefragt...';
+
+      try {
+        const sasRes = await fetch(`/api/generate_sas_token?caseId=${caseId}`);
+        if (!sasRes.ok) throw new Error('Fehler beim Abrufen des SAS-Links');
+
+        const sasUrl = await sasRes.text();
+        status.textContent = 'Datei wird hochgeladen...';
+
+        await fetch(sasUrl, {
+          method: 'PUT',
+          headers: { 'x-ms-blob-type': 'BlockBlob' },
+          body: file
+        });
+
+        status.textContent = 'Upload erfolgreich!';
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Fehler: ' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
